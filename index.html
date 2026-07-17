@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TANDEM Ecosystem Map</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
+  background:#f5f4f0;
+  color:#1a1a18;
+  min-height:100vh;
+  padding:0;
+}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0}
+
+/* ── page layout ────────────────────────────────── */
+.page-wrap{max-width:1400px;margin:0 auto;padding:1.5rem 1.5rem 2rem}
+.page-header{margin-bottom:1.25rem}
+.page-title{font-size:22px;font-weight:500;color:#1a1a18;margin-bottom:3px}
+.page-sub{font-size:14px;color:#5f5e5a;line-height:1.6;max-width:820px}
+
+/* ── filter controls ────────────────────────────── */
+#controls{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.ctrl-btn{
+  padding:6px 13px;border-radius:7px;
+  border:0.5px solid rgba(0,0,0,0.18);
+  background:#ffffff;font-size:12px;
+  cursor:pointer;color:#5f5e5a;
+  font-family:inherit;
+  transition:background .12s,border-color .12s;
+  line-height:1.4
+}
+.ctrl-btn:hover{background:#eeece5;border-color:rgba(0,0,0,0.28)}
+.ctrl-btn.active{font-weight:500}
+.ctrl-btn.f-all.active    {background:#1a1a18;color:#fff;border-color:#1a1a18}
+.ctrl-btn.f-demand.active {background:#E1F5EE;border-color:#1D9E75;color:#085041}
+.ctrl-btn.f-enabler.active{background:#EEEDFE;border-color:#534AB7;color:#26215C}
+.ctrl-btn.f-supply.active {background:#FAEEDA;border-color:#BA7517;color:#412402}
+.ctrl-btn.f-finance.active{background:#E6F1FB;border-color:#185FA5;color:#042C53}
+.ctrl-btn.f-govpol.active {background:#FAECE7;border-color:#D85A30;color:#4A1B0C}
+.ctrl-btn.f-dev.active    {background:#EAF3DE;border-color:#3B6D11;color:#173404}
+.ctrl-btn.f-tandem.active {background:#1D9E75;color:#fff;border-color:#1D9E75}
+
+/* ── canvas ─────────────────────────────────────── */
+#canvas-wrap{
+  position:relative;
+  border:0.5px solid rgba(0,0,0,0.12);
+  border-radius:12px;
+  overflow:hidden;
+  background:#fafaf8;
+  height:680px;
+  user-select:none;
+}
+svg#graph{
+  display:block;
+  width:100%;
+  height:100%;
+  cursor:grab;
+}
+svg#graph:active{cursor:grabbing}
+
+/* ── graph elements ─────────────────────────────── */
+.node-circle{stroke-width:1.5;cursor:pointer;transition:opacity .18s}
+.node-label{font-size:10px;pointer-events:none;font-family:system-ui,sans-serif;fill:#1a1a18}
+.node-label.small{font-size:9px}
+.link{stroke-width:1;fill:none;opacity:0.22;transition:opacity .18s}
+.link.tandem-link{stroke-width:1.5;opacity:0.45;stroke-dasharray:5 3}
+
+/* ── detail panel ───────────────────────────────── */
+#detail{
+  position:absolute;top:0;right:0;
+  width:280px;height:100%;
+  background:#ffffff;
+  border-left:0.5px solid rgba(0,0,0,0.12);
+  padding:16px 16px 16px 16px;
+  display:none;
+  overflow-y:auto;
+  font-size:12.5px;
+  z-index:10;
+}
+#detail h3{
+  font-size:15px;font-weight:500;
+  color:#1a1a18;margin-bottom:5px;
+  line-height:1.4;padding-right:22px;
+}
+.layer-tag{
+  display:inline-block;font-size:10.5px;
+  padding:2px 9px;border-radius:5px;
+  margin-bottom:10px;font-weight:500;
+}
+.tandem-badge{
+  display:none;font-size:10.5px;
+  padding:2px 9px;border-radius:5px;
+  background:#E1F5EE;color:#085041;
+  font-weight:500;margin-bottom:10px;
+  margin-left:5px;
+}
+.d-section{margin-bottom:12px}
+.d-section-title{
+  font-size:10px;font-weight:500;
+  letter-spacing:.06em;text-transform:uppercase;
+  color:#888780;margin-bottom:4px;
+}
+.d-section-body{color:#5f5e5a;line-height:1.6;font-size:12px}
+.partner-badge{
+  display:inline-block;font-size:10.5px;
+  padding:2px 8px;border-radius:4px;
+  background:#EEEDFE;color:#26215C;
+  font-weight:500;margin:2px 2px 2px 0;
+}
+#close-btn{
+  position:absolute;top:12px;right:12px;
+  background:none;border:none;font-size:18px;
+  cursor:pointer;color:#888780;line-height:1;
+  padding:2px 4px;border-radius:4px;
+}
+#close-btn:hover{background:#f1efe8;color:#1a1a18}
+
+/* ── legend ─────────────────────────────────────── */
+#legend{
+  display:flex;flex-wrap:wrap;
+  gap:10px 20px;
+  padding:10px 0 0;
+  font-size:11.5px;
+  color:#5f5e5a;
+}
+.leg{display:flex;align-items:center;gap:5px}
+.leg-dot{
+  width:11px;height:11px;
+  border-radius:50%;flex-shrink:0;
+}
+
+/* ── hint ───────────────────────────────────────── */
+.hint{
+  font-size:11.5px;color:#888780;
+  margin-bottom:8px;
+  font-style:italic;
+}
+
+/* ── responsive ─────────────────────────────────── */
+@media(max-width:700px){
+  #detail{width:100%;height:auto;max-height:50%;top:auto;bottom:0;border-left:none;border-top:0.5px solid rgba(0,0,0,0.12)}
+  #canvas-wrap{height:420px}
+}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <h1 class="sr-only">TANDEM ecosystem map — all actors in the Nigerian solar MSME ecosystem, their existing roles and roles in the TANDEM intervention</h1>
+
+  <div class="page-header">
+    <p class="page-title">TANDEM ecosystem map</p>
+    <p class="page-sub">All actors in the Nigerian solar MSME ecosystem, their existing roles, and the roles they play in the TANDEM intervention. Click any node to expand details. Hover to highlight connections. Use the filters to isolate layers.</p>
+  </div>
+
+  <div id="controls">
+    <button class="ctrl-btn f-all active" onclick="filter('all')">All actors</button>
+    <button class="ctrl-btn f-demand"  onclick="filter('demand')">MSMEs</button>
+    <button class="ctrl-btn f-enabler" onclick="filter('enabler')">Enablers</button>
+    <button class="ctrl-btn f-supply"  onclick="filter('supply')">Solar supply chain</button>
+    <button class="ctrl-btn f-finance" onclick="filter('finance')">Financial ecosystem</button>
+    <button class="ctrl-btn f-govpol"  onclick="filter('govpol')">Government and policy</button>
+    <button class="ctrl-btn f-dev"     onclick="filter('dev')">Development actors</button>
+    <button class="ctrl-btn f-tandem"  onclick="filter('tandem')">TANDEM actors only</button>
+  </div>
+
+  <p class="hint">Drag to pan &nbsp;·&nbsp; Scroll to zoom &nbsp;·&nbsp; Click a node to see details &nbsp;·&nbsp; Hover to trace connections</p>
+
+  <div id="canvas-wrap">
+    <svg id="graph"></svg>
+    <div id="detail">
+      <button id="close-btn" onclick="closeDetail()" aria-label="Close detail panel">&#x2715;</button>
+      <h3 id="d-name"></h3>
+      <div style="margin-bottom:10px">
+        <span id="d-tag" class="layer-tag"></span>
+        <span id="d-tandem-badge" class="tandem-badge">TANDEM participant</span>
+      </div>
+      <div class="d-section">
+        <div class="d-section-title">Who they are</div>
+        <div class="d-section-body" id="d-who"></div>
+      </div>
+      <div class="d-section">
+        <div class="d-section-title">Existing ecosystem role</div>
+        <div class="d-section-body" id="d-role"></div>
+      </div>
+      <div class="d-section" id="d-tandem-sec">
+        <div class="d-section-title">Role in TANDEM</div>
+        <div class="d-section-body" id="d-tandem"></div>
+      </div>
+      <div class="d-section" id="d-partner-sec">
+        <div class="d-section-title">Consortium interface</div>
+        <div id="d-partners"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="legend">
+    <div class="leg"><div class="leg-dot" style="background:#1D9E75"></div>MSMEs (demand)</div>
+    <div class="leg"><div class="leg-dot" style="background:#534AB7"></div>Enablers</div>
+    <div class="leg"><div class="leg-dot" style="background:#BA7517"></div>Solar supply chain</div>
+    <div class="leg"><div class="leg-dot" style="background:#185FA5"></div>Financial ecosystem</div>
+    <div class="leg"><div class="leg-dot" style="background:#D85A30"></div>Government and policy</div>
+    <div class="leg"><div class="leg-dot" style="background:#3B6D11"></div>Development actors</div>
+    <div class="leg"><div class="leg-dot" style="background:#E1F5EE;border:2px solid #1D9E75"></div>TANDEM participant</div>
+    <div class="leg" style="align-items:center">
+      <svg width="24" height="10" style="flex-shrink:0">
+        <line x1="0" y1="5" x2="24" y2="5" stroke="#534AB7" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.7"/>
+      </svg>
+      TANDEM relationship
+    </div>
+    <div class="leg" style="align-items:center">
+      <svg width="24" height="10" style="flex-shrink:0">
+        <line x1="0" y1="5" x2="24" y2="5" stroke="#888780" stroke-width="1" opacity="0.5"/>
+      </svg>
+      Existing ecosystem relationship
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+const COLORS = {
+  demand:"#1D9E75", enabler:"#534AB7", supply:"#BA7517",
+  finance:"#185FA5", govpol:"#D85A30", dev:"#3B6D11"
+};
+const FILLS = {
+  demand:"#E1F5EE", enabler:"#EEEDFE", supply:"#FAEEDA",
+  finance:"#E6F1FB", govpol:"#FAECE7", dev:"#EAF3DE"
+};
+const LAYER_LABELS = {
+  demand:"MSMEs — demand side", enabler:"Enablers / consortium",
+  supply:"Solar supply chain", finance:"Financial ecosystem",
+  govpol:"Government and policy", dev:"Development and humanitarian"
+};
+
+const nodes = [
+  /* ── MSME demand ─────────────────────────────── */
+  {id:"agric-msme", label:"Agricultural MSMEs", layer:"demand", r:20, tandem:true,
+   who:"Smallholder farmers and agroprocessors — the largest group of MSME end-users targeted by TANDEM.",
+   role:"Produce food commodities; suffer 30–50% post-harvest losses without reliable power or preservation. Primary driver of demand for solar and cold chain services.",
+   tandemRole:"Secondary participants. Receive improved solar and preservation services through the coordinated enabler network. Organised into clusters by the Demand Engine.",
+   partners:["Demand Engine","Micro-Enabler Network","Embedded Finance"]},
+
+  {id:"nonfarm-msme", label:"Non-farm MSMEs", layer:"demand", r:18, tandem:true,
+   who:"Urban and peri-urban retailers, food vendors, small manufacturers, and transport operators.",
+   role:"Lose 2–5 productive hours daily to outages. Generator fuel costs consume 60–75% of operating budgets. High latent demand for productive-use solar.",
+   tandemRole:"Secondary participants. Enrolled via Demand Engine cluster model. Receive reliable solar services through the coordinated Micro-Enabler Network.",
+   partners:["Demand Engine","Micro-Enabler Network","Embedded Finance"]},
+
+  {id:"coop-msme", label:"MSME cooperatives", layer:"demand", r:16, tandem:true,
+   who:"Women's farming cooperatives, market associations, and MSME cluster organisations.",
+   role:"Aggregate member demand for goods and services. Lack capacity to organise collectively around solar. Key vehicle for reducing coordination costs.",
+   tandemRole:"Primary organisational unit for the Demand Engine. Cooperative structure enables group finance, shared hub governance, and aggregated offtake commitments.",
+   partners:["Demand Engine","Embedded Finance","Supply Layer"]},
+
+  {id:"women-msme", label:"Women-led MSMEs", layer:"demand", r:15, tandem:true,
+   who:"Woman-owned enterprises facing gender-specific exclusion from solar finance, information, and service channels.",
+   role:"Represent the majority of MSME operators in target clusters. Face compounded barriers: household approval norms, collateral exclusion, male-coded outreach.",
+   tandemRole:"80% of all TANDEM direct participants must be women. Female booking agents, collateral-free products, and female technician deployment designed specifically for this group.",
+   partners:["Demand Engine","Embedded Finance","Micro-Enabler Network"]},
+
+  {id:"plwd-msme", label:"PLWD-led MSMEs", layer:"demand", r:13, tandem:true,
+   who:"Entrepreneurs with physical, sensory, or cognitive disabilities facing compounded exclusion from solar markets and business support.",
+   role:"Largely invisible to solar sector operators. Disability-specific power loads are never factored into need assessments.",
+   tandemRole:"10% of TANDEM participants must be persons with disabilities. Accessible booking, home-visit dispatch, adapted training, and disability-specific credit appraisal.",
+   partners:["Demand Engine","Micro-Enabler Network","Embedded Finance"]},
+
+  {id:"rdp-msme", label:"RDP MSMEs", layer:"demand", r:13, tandem:true,
+   who:"Refugees, internally displaced persons, and returnees operating micro-enterprises under legal and financial precarity.",
+   role:"Face total documentation exclusion from financial products. Displacement risk makes individual long-term payment commitments commercially unviable.",
+   tandemRole:"Served through identity-light finance products, shared hub models, and UNHCR/IOM pathway partnerships. NGO or community organisation as contract intermediary.",
+   partners:["Demand Engine","Embedded Finance","Capital Engine"]},
+
+  /* ── Enablers ─────────────────────────────────── */
+  {id:"CTH", label:"Clean Tech Hub (CTH)", layer:"enabler", r:22, tandem:true,
+   who:"Prime Integrator and Consortium Lead. Abuja-based policy research and climate action organisation.",
+   role:"Brings MEL, research, and systems integration capacity to the Nigerian energy and climate ecosystem.",
+   tandemRole:"Consortium Lead, Prime Integrator, MEL and Safeguarding partner. Coordinates all five partners, maintains delivery discipline, protects public benefit, and drives learning.",
+   partners:["All consortium partners"]},
+
+  {id:"demand-eng", label:"Demand Engine", layer:"enabler", r:18, tandem:true,
+   who:"Consortium partner responsible for MSME cluster organisation, demand aggregation, and the Solar Market Platform.",
+   role:"Does not exist as an entity prior to TANDEM. Role is designed specifically for the intervention.",
+   tandemRole:"Organises MSMEs into transaction-ready clusters; engineers demand; facilitates cooperative formation; deploys booking agents; operates the Solar Market Platform.",
+   partners:["All MSME actors","CTH"]},
+
+  {id:"micro-net", label:"Micro-Enabler Network", layer:"enabler", r:18, tandem:true,
+   who:"Consortium partner responsible for training, coordinating, and supporting solar value-chain enablers.",
+   role:"Professionalises the fragmented informal solar installer and hub operator workforce in Nigeria.",
+   tandemRole:"Trains and certifies installers and technicians; defines income pathways; coordinates dispatch; manages spare parts supply chain; provides coaching and QA.",
+   partners:["Installers","Hub operators","Supply Layer","CTH"]},
+
+  {id:"supply-lay", label:"Supply Layer", layer:"enabler", r:18, tandem:true,
+   who:"Consortium partner responsible for technical standards, quality assurance, and coordination across all solar and preservation deployments.",
+   role:"Sets and enforces the quality floor below which no TANDEM deployment may proceed.",
+   tandemRole:"Develops SOPs; maintains approved vendor registry; pre-shipment inspection; post-installation audits; quarterly quality reviews; hub governance framework.",
+   partners:["OEMs","Distributors","Micro-Enabler Network","CTH"]},
+
+  {id:"installer", label:"Solar installers", layer:"enabler", r:18, tandem:true,
+   who:"Individual and small-team solar installers and technicians — currently informal, episodic, no stable pipeline.",
+   role:"Carry out installation and repair of solar systems without accreditation, SOPs, or reliable demand. Quality highly variable.",
+   tandemRole:"Primary participants. Trained and certified through the Micro-Enabler Network. Listed on Solar Market Platform. Provided stable income through cluster demand pipelines.",
+   partners:["Micro-Enabler Network","Supply Layer","Embedded Finance"]},
+
+  {id:"hub-op", label:"Hub operators", layer:"enabler", r:16, tandem:true,
+   who:"Operators of solar hubs and preservation centres — often women's cooperative leaders managing shared community assets.",
+   role:"Currently manage hubs without formal training, income, or governance. Hub viability is fragile and project-cycle dependent.",
+   tandemRole:"Primary participants. Defined as a recognised income-earning role. Trained by Micro-Enabler Network; hub governance by Supply Layer; embedded payment via Embedded Finance.",
+   partners:["Micro-Enabler Network","Supply Layer","Demand Engine"]},
+
+  {id:"aggregator-en", label:"Aggregators", layer:"enabler", r:16, tandem:true,
+   who:"Coordinators of produce offtake from MSME clusters — viability depends directly on MSME productive capacity.",
+   role:"Operate informally; suffer spoilage losses; cannot access inventory financing; stuck in low-value local markets.",
+   tandemRole:"Primary participants. Demand Engine aligns MSME supply timing to aggregator collection. Capital Engine brokers factoring. Platform provides dispatch tools.",
+   partners:["Demand Engine","Capital Engine","Embedded Finance"]},
+
+  {id:"booking-ag", label:"Booking agents", layer:"enabler", r:14, tandem:true,
+   who:"A new role created by TANDEM: human intermediaries bringing digitally excluded MSMEs into the service network.",
+   role:"Does not exist in the current ecosystem. Created to fill the gap left by digital exclusion and absent accessible service channels.",
+   tandemRole:"Primary participants. Recruited, trained, and deployed by the Demand Engine. Assigned to defined clusters. Income from platform commission on confirmed bookings.",
+   partners:["Demand Engine","Micro-Enabler Network"]},
+
+  /* ── Solar supply chain ───────────────────────── */
+  {id:"solar-platform", label:"Solar Market Platform", layer:"supply", r:15, tandem:true,
+   who:"Digital coordination platform built and operated by the Demand Engine within TANDEM.",
+   role:"Does not exist prior to TANDEM. Fills the gap left by the absence of any trusted channel connecting MSMEs to verified solar service providers.",
+   tandemRole:"Vetted enabler listings; quality ratings; scheduling; dispatch; payment tracking; booking agent interface; performance data feed for MEL and Capital Engine.",
+   partners:["Demand Engine","Micro-Enabler Network","Capital Engine","CTH"]},
+
+  {id:"paygo", label:"PAYGo solar companies", layer:"supply", r:15, tandem:true,
+   who:"Companies offering pay-as-you-go solar with embedded payment technology (e.g. SunFi model).",
+   role:"Provide end-to-end solar-as-a-service to households and small businesses. Operate closest to the nonconsumption market of any commercial solar actor.",
+   tandemRole:"Potential ecosystem partner. Payment and monitoring technology may integrate with Solar Market Platform and Embedded Finance architecture.",
+   partners:["Embedded Finance","Supply Layer","Capital Engine"]},
+
+  {id:"oem", label:"OEM manufacturers", layer:"supply", r:13, tandem:false,
+   who:"Overseas manufacturers and assemblers of solar panels, batteries, and productive-use appliances.",
+   role:"Produce equipment entering the Nigerian market via importation. Set technical specifications driving downstream standards.",
+   tandemRole:"Indirectly engaged via the Supply Layer's approved vendor and pre-shipment inspection regime. Not a direct consortium partner.",
+   partners:["Supply Layer"]},
+
+  {id:"distributor", label:"Wholesale distributors", layer:"supply", r:13, tandem:false,
+   who:"Nigerian-based importers and wholesale distributors of solar equipment and components.",
+   role:"Hold inventory and distribute to retailers and installers. Counterfeit and substandard components currently enter through this layer.",
+   tandemRole:"Engaged by Supply Layer through approved vendor registration. Must meet quality standards to supply TANDEM-certified installers.",
+   partners:["Supply Layer"]},
+
+  {id:"retailer", label:"Solar retailers", layer:"supply", r:11, tandem:false,
+   who:"Solar product shops and retail outlets selling equipment to end-users and installers.",
+   role:"Point of sale for solar equipment. Enormous quality variation. No accountability mechanism for underperforming products.",
+   tandemRole:"Listed on Solar Market Platform only if products meet Supply Layer standards. Not a direct consortium partner.",
+   partners:["Supply Layer","Demand Engine"]},
+
+  {id:"logistics", label:"Logistics and dispatch", layer:"supply", r:11, tandem:false,
+   who:"Dispatch riders and logistics operators moving solar equipment to cluster and installation sites.",
+   role:"Last-mile delivery of solar components. Critical bottleneck for timely installation, especially in rural clusters.",
+   tandemRole:"Managed through Solar Market Platform dispatch coordination. Micro-Enabler Network installers may operate their own last-mile logistics.",
+   partners:["Micro-Enabler Network","Demand Engine"]},
+
+  {id:"spare-parts", label:"Spare parts suppliers", layer:"supply", r:11, tandem:false,
+   who:"Suppliers of replacement components — batteries, inverters, wiring, mounting hardware.",
+   role:"Spare parts unavailability is a primary driver of prolonged downtime and MSME productive time loss after faults.",
+   tandemRole:"Supply Layer establishes cluster-level spare parts inventory as part of the Micro-Enabler Network service backbone.",
+   partners:["Supply Layer","Micro-Enabler Network"]},
+
+  {id:"telecom", label:"Mobile network operators", layer:"supply", r:11, tandem:false,
+   who:"Nigerian MNOs (MTN, Airtel, Glo) providing the connectivity backbone for the Solar Market Platform.",
+   role:"Data and voice connectivity infrastructure on which all digital services depend. Coverage gaps in rural clusters constrain platform reach.",
+   tandemRole:"Infrastructure dependency, not a partner. Connectivity gaps must be accommodated through offline-capable booking agent workflows.",
+   partners:["Demand Engine"]},
+
+  /* ── Financial ecosystem ──────────────────────── */
+  {id:"emb-fin", label:"Embedded Finance", layer:"finance", r:18, tandem:true,
+   who:"Consortium partner responsible for designing and deploying inclusive finance products integrated into service delivery.",
+   role:"Fills the gap left by the absence of any financial product designed for MSME solar adoption at the informal sector scale.",
+   tandemRole:"Designs lease-to-own, factoring, demand guarantees, gender-responsive products; onboards MFIs and mobile money providers; structures incremental payment collection.",
+   partners:["MFIs","Mobile money","Asset finance","Capital Engine","CTH"]},
+
+  {id:"cap-eng", label:"Capital Engine", layer:"finance", r:18, tandem:true,
+   who:"Consortium partner aggregating MSME payment flows and crowding in private capital.",
+   role:"Transitions TANDEM from grant dependency to sustainable private capital by building investable portfolios.",
+   tandemRole:"Portfolio aggregation architecture; credit enhancement instruments; investor onboarding; factoring for aggregators; 4:1 crowd-in target; post-grant financing model.",
+   partners:["Impact investors","DFIs","MFIs","Embedded Finance","CTH"]},
+
+  {id:"mfi", label:"MFIs", layer:"finance", r:17, tandem:true,
+   who:"Microfinance institutions offering credit to small and informal businesses in Nigeria.",
+   role:"Primary formal credit channel for MSMEs. Currently exclude solar investment due to collateral requirements and inability to assess solar cash-flow impact.",
+   tandemRole:"Onboarded by Embedded Finance as financial infrastructure partners. Vendor factoring, demand guarantees, and pilot portfolio data used to de-risk solar lending.",
+   partners:["Embedded Finance","Capital Engine"]},
+
+  {id:"mobile-money", label:"Mobile money providers", layer:"finance", r:15, tandem:true,
+   who:"Mobile money platforms (OPay, PalmPay, MTN MoMo) providing digital payments to informal sector users.",
+   role:"Digital financial infrastructure for the majority of MSME operators. Enable PayGo payment collection and daily revenue sweep models.",
+   tandemRole:"Payment rails for Embedded Finance's incremental payment products. Capital Engine aggregates settlement data for portfolio formation.",
+   partners:["Embedded Finance","Capital Engine"]},
+
+  {id:"asset-fin", label:"Asset finance providers", layer:"finance", r:13, tandem:true,
+   who:"Lease-to-own and asset financing companies providing capital for productive equipment.",
+   role:"Offer financing against productive asset cash flows. Limited penetration in solar due to uncertainty about equipment performance and MSME repayment reliability.",
+   tandemRole:"Engaged by Embedded Finance to structure lease-to-own models. Supply Layer QA data underpins asset performance guarantees.",
+   partners:["Embedded Finance","Supply Layer"]},
+
+  {id:"impact-inv", label:"Impact investors and DFIs", layer:"finance", r:15, tandem:true,
+   who:"Impact investors, development finance institutions, and blended finance providers.",
+   role:"Provide catalytic capital to de-risk solar lending. Limited by absence of aggregated, investable MSME solar portfolios in Nigeria.",
+   tandemRole:"Capital Engine's primary target. Crowded in at 4:1 ratio against philanthropic anchor. First pilot portfolio structured for DFI review from Month 12.",
+   partners:["Capital Engine","Embedded Finance"]},
+
+  {id:"insurance", label:"Solar asset insurance", layer:"finance", r:11, tandem:false,
+   who:"Insurance companies providing coverage against solar asset loss, damage, or underperformance.",
+   role:"Solar insurance products exist in principle but penetration is extremely low, increasing perceived risk of solar investment.",
+   tandemRole:"Identified as a systemic enabler beyond the 2-year pilot. Supply Layer quality standards and remote monitoring data would underpin an insurability case.",
+   partners:["Supply Layer"]},
+
+  {id:"comm-bank", label:"Commercial banks", layer:"finance", r:11, tandem:false,
+   who:"Nigerian commercial banks offering business loans and financial services.",
+   role:"Largely absent from MSME solar financing due to high minimum loan sizes, collateral requirements, and risk aversion.",
+   tandemRole:"Not engaged in the 2-year pilot. Capital Engine's credit profile building is a pathway toward commercial bank engagement post-pilot.",
+   partners:["Capital Engine"]},
+
+  /* ── Government and policy ────────────────────── */
+  {id:"REA", label:"Rural Electrification Agency", layer:"govpol", r:17, tandem:true,
+   who:"Federal government agency managing rural electrification and the $350M Nigeria Electrification Project (NEP).",
+   role:"Largest single source of public funding for off-grid solar in Nigeria. Key regulatory environment-setter for productive-use solar.",
+   tandemRole:"Policy alignment target. TANDEM's shared hub infrastructure aligns with NEP goals. Potential co-funding pathway post-pilot. Engaged by CTH.",
+   partners:["CTH","Supply Layer"]},
+
+  {id:"SON", label:"Standards Organisation of Nigeria", layer:"govpol", r:13, tandem:true,
+   who:"Nigerian national standards body responsible for setting and enforcing product quality standards.",
+   role:"Sets technical standards for solar equipment imports. Enforcement is weak; counterfeit products enter the market without adequate screening.",
+   tandemRole:"Supply Layer aligns TANDEM technical standards with SON frameworks. Pre-shipment inspection regime builds on SON's existing standards.",
+   partners:["Supply Layer"]},
+
+  {id:"min-power", label:"Ministry of Power", layer:"govpol", r:13, tandem:false,
+   who:"Federal ministry responsible for energy sector policy and regulation.",
+   role:"Sets import duties (70%+ on solar equipment), technical standards references, and grid expansion policy.",
+   tandemRole:"Policy advocacy target (systemic, long-term). TANDEM generates evidence for reform on import duties and quality standards.",
+   partners:["CTH"]},
+
+  {id:"min-agric", label:"Ministry of Agriculture", layer:"govpol", r:12, tandem:false,
+   who:"Federal ministry responsible for agriculture policy, extension services, and rural development.",
+   role:"Extension officers are a primary access channel to agricultural MSME clusters. Policy directly affects demand for solar-for-agriculture.",
+   tandemRole:"Coordination opportunity for Demand Engine cluster mapping. Not a formal consortium partner but a channel for cooperative activation.",
+   partners:["Demand Engine"]},
+
+  {id:"REAN", label:"REAN (solar sector association)", layer:"govpol", r:12, tandem:false,
+   who:"Renewable Energy Association of Nigeria — industry association for solar sector players.",
+   role:"Advocates for policy reform, shares market intelligence, promotes industry standards. Forum for value chain coordination.",
+   tandemRole:"Coordination and advocacy alignment. Supply Layer engages REAN for standards harmonisation and industry intelligence.",
+   partners:["Supply Layer","CTH"]},
+
+  {id:"state-gov", label:"State governments", layer:"govpol", r:12, tandem:false,
+   who:"State-level governments and local government areas in the pilot geographies.",
+   role:"Control land use, local market governance, and some social welfare programmes. Can enable or block cluster formation and hub establishment.",
+   tandemRole:"Engagement through CTH as Consortium Lead. Hub site approvals and community facilitation require state government coordination.",
+   partners:["CTH","Demand Engine"]},
+
+  /* ── Development and humanitarian ────────────── */
+  {id:"MCF", label:"Mastercard Foundation", layer:"dev", r:20, tandem:true,
+   who:"Anchor funder of TANDEM. One of the world's largest private foundations, implementing Young Africa Works strategy in Nigeria.",
+   role:"Provides philanthropic capital, strategic direction, and network leverage for market-creating innovation in Nigeria.",
+   tandemRole:"Anchor funder and principal. Provides the philanthropic first-loss tranche the Capital Engine uses to crowd in private capital. Approves quarterly reports from CTH.",
+   partners:["CTH","Capital Engine"]},
+
+  {id:"GIZ", label:"GIZ / NESP", layer:"dev", r:14, tandem:false,
+   who:"German development cooperation and Nigeria Energy Support Programme — active in Nigerian renewable energy sector.",
+   role:"Technical assistance and policy support for off-grid solar. Engaged in standards development and private sector facilitation.",
+   tandemRole:"Ecosystem coordination partner. TANDEM standards and QA work builds on GIZ/NESP technical assistance frameworks.",
+   partners:["Supply Layer","CTH"]},
+
+  {id:"USAID", label:"USAID / Power Africa", layer:"dev", r:13, tandem:false,
+   who:"US government development programme focused on expanding electricity access across Africa.",
+   role:"Provides transaction advisory, capital mobilisation, and policy support for off-grid solar in Nigeria.",
+   tandemRole:"Potential capital co-investor through the Capital Engine structure. Not a formal TANDEM partner.",
+   partners:["Capital Engine"]},
+
+  {id:"WB-IFC", label:"World Bank and IFC", layer:"dev", r:13, tandem:false,
+   who:"World Bank Group providing development finance and private sector investment through IFC.",
+   role:"Funds Nigeria Electrification Project (with REA). IFC provides direct investment to solar companies and financial institutions.",
+   tandemRole:"Target for Capital Engine portfolio investment from Month 18. TANDEM's aggregated payment data provides the portfolio evidence IFC requires.",
+   partners:["Capital Engine"]},
+
+  {id:"UNHCR", label:"UNHCR and IOM", layer:"dev", r:13, tandem:true,
+   who:"UN Refugee Agency and International Organisation for Migration — active in displacement contexts in Nigeria.",
+   role:"Provide protection, humanitarian assistance, and economic inclusion support to displaced populations.",
+   tandemRole:"Partnership pathway for RDP MSME inclusion. Community vouching, NGO co-guarantor models, and economic inclusion programme linkage.",
+   partners:["Demand Engine","Embedded Finance"]},
+
+  {id:"AFAN", label:"Farmers associations", layer:"dev", r:12, tandem:false,
+   who:"National and state-level farmers associations (e.g. AFAN — All Farmers Association of Nigeria).",
+   role:"Represent smallholder farmers and agricultural cooperatives. Mobilise collective voice and aggregate market access.",
+   tandemRole:"Activation channel for Demand Engine cooperative enrolment. AFAN state chapters provide introductions to priority agricultural MSME clusters.",
+   partners:["Demand Engine"]},
+
+  {id:"SNV-NGO", label:"NGOs with solar programmes", layer:"dev", r:12, tandem:false,
+   who:"Development NGOs running solar energy programmes in Nigeria (SNV, Practical Action, NRGI, etc.).",
+   role:"Community-level solar deployment, training, and advocacy. Often operate in the same geographic clusters as TANDEM's target population.",
+   tandemRole:"Coordination to avoid duplication; potential referral channels for trained enablers and enrolled MSMEs into the TANDEM network.",
+   partners:["Demand Engine","Micro-Enabler Network"]},
+];
+
+const links = [
+  /* consortium backbone */
+  {source:"CTH",target:"demand-eng",  type:"consortium"},
+  {source:"CTH",target:"micro-net",   type:"consortium"},
+  {source:"CTH",target:"supply-lay",  type:"consortium"},
+  {source:"CTH",target:"emb-fin",     type:"consortium"},
+  {source:"CTH",target:"cap-eng",     type:"consortium"},
+  /* demand engine → MSMEs */
+  {source:"demand-eng",target:"agric-msme",   type:"tandem"},
+  {source:"demand-eng",target:"nonfarm-msme", type:"tandem"},
+  {source:"demand-eng",target:"coop-msme",    type:"tandem"},
+  {source:"demand-eng",target:"women-msme",   type:"tandem"},
+  {source:"demand-eng",target:"plwd-msme",    type:"tandem"},
+  {source:"demand-eng",target:"rdp-msme",     type:"tandem"},
+  {source:"demand-eng",target:"booking-ag",   type:"tandem"},
+  {source:"demand-eng",target:"solar-platform",type:"tandem"},
+  /* micro-enabler network → enablers */
+  {source:"micro-net",target:"installer",     type:"tandem"},
+  {source:"micro-net",target:"hub-op",        type:"tandem"},
+  {source:"micro-net",target:"aggregator-en", type:"tandem"},
+  /* supply layer */
+  {source:"supply-lay",target:"installer",    type:"tandem"},
+  {source:"supply-lay",target:"hub-op",       type:"tandem"},
+  {source:"supply-lay",target:"oem",          type:"ecosystem"},
+  {source:"supply-lay",target:"distributor",  type:"ecosystem"},
+  {source:"supply-lay",target:"SON",          type:"ecosystem"},
+  /* embedded finance */
+  {source:"emb-fin",target:"mfi",             type:"tandem"},
+  {source:"emb-fin",target:"mobile-money",    type:"tandem"},
+  {source:"emb-fin",target:"asset-fin",       type:"tandem"},
+  /* capital engine */
+  {source:"cap-eng",target:"impact-inv",      type:"tandem"},
+  {source:"cap-eng",target:"mfi",             type:"tandem"},
+  {source:"cap-eng",target:"aggregator-en",   type:"tandem"},
+  {source:"cap-eng",target:"MCF",             type:"tandem"},
+  /* MSME ↔ enabler service flows */
+  {source:"agric-msme",  target:"aggregator-en", type:"ecosystem"},
+  {source:"nonfarm-msme",target:"aggregator-en", type:"ecosystem"},
+  {source:"coop-msme",   target:"aggregator-en", type:"ecosystem"},
+  {source:"installer",   target:"agric-msme",    type:"ecosystem"},
+  {source:"installer",   target:"nonfarm-msme",  type:"ecosystem"},
+  {source:"hub-op",      target:"agric-msme",    type:"ecosystem"},
+  {source:"hub-op",      target:"coop-msme",     type:"ecosystem"},
+  {source:"booking-ag",  target:"women-msme",    type:"ecosystem"},
+  {source:"booking-ag",  target:"plwd-msme",     type:"ecosystem"},
+  {source:"booking-ag",  target:"rdp-msme",      type:"ecosystem"},
+  /* supply chain flows */
+  {source:"oem",        target:"distributor",    type:"ecosystem"},
+  {source:"distributor",target:"retailer",       type:"ecosystem"},
+  {source:"retailer",   target:"installer",      type:"ecosystem"},
+  {source:"paygo",      target:"agric-msme",     type:"ecosystem"},
+  {source:"paygo",      target:"nonfarm-msme",   type:"ecosystem"},
+  {source:"spare-parts",target:"installer",      type:"ecosystem"},
+  {source:"logistics",  target:"installer",      type:"ecosystem"},
+  {source:"logistics",  target:"solar-platform", type:"ecosystem"},
+  {source:"telecom",    target:"solar-platform", type:"ecosystem"},
+  /* platform connections */
+  {source:"solar-platform",target:"installer",     type:"tandem"},
+  {source:"solar-platform",target:"aggregator-en", type:"tandem"},
+  /* government / policy */
+  {source:"REA",      target:"hub-op",       type:"ecosystem"},
+  {source:"REA",      target:"CTH",          type:"ecosystem"},
+  {source:"min-agric",target:"demand-eng",   type:"ecosystem"},
+  {source:"REAN",     target:"supply-lay",   type:"ecosystem"},
+  {source:"state-gov",target:"CTH",          type:"ecosystem"},
+  {source:"SON",      target:"supply-lay",   type:"ecosystem"},
+  /* development */
+  {source:"MCF",    target:"CTH",          type:"tandem"},
+  {source:"GIZ",    target:"supply-lay",   type:"ecosystem"},
+  {source:"USAID",  target:"cap-eng",      type:"ecosystem"},
+  {source:"WB-IFC", target:"cap-eng",      type:"ecosystem"},
+  {source:"UNHCR",  target:"rdp-msme",     type:"ecosystem"},
+  {source:"AFAN",   target:"agric-msme",   type:"ecosystem"},
+  {source:"AFAN",   target:"demand-eng",   type:"ecosystem"},
+  {source:"SNV-NGO",target:"demand-eng",   type:"ecosystem"},
+  {source:"SNV-NGO",target:"micro-net",    type:"ecosystem"},
+];
+
+/* ─── graph setup ───────────────────────────────── */
+const wrap = document.getElementById("canvas-wrap");
+const W = wrap.clientWidth || 1200;
+const H = 680;
+
+const svg  = d3.select("#graph").attr("viewBox",`0 0 ${W} ${H}`).attr("preserveAspectRatio","xMidYMid meet");
+const gAll = svg.append("g");
+
+const zoom = d3.zoom().scaleExtent([0.25,4]).on("zoom", e => gAll.attr("transform", e.transform));
+svg.call(zoom);
+
+/* radial band x centres per layer */
+function lx(layer){
+  const m = {demand:0.13, enabler:0.50, supply:0.78, finance:0.87, govpol:0.25, dev:0.65};
+  return (m[layer] || 0.5) * W;
+}
+function ly(layer){
+  const m = {demand:0.58, enabler:0.45, supply:0.58, finance:0.72, govpol:0.18, dev:0.22};
+  return (m[layer] || 0.5) * H;
+}
+
+const simulation = d3.forceSimulation(nodes)
+  .force("link", d3.forceLink(links).id(d=>d.id)
+    .distance(d => d.type==="consortium" ? 80 : d.type==="tandem" ? 62 : 52)
+    .strength(d => d.type==="consortium" ? 0.85 : d.type==="tandem" ? 0.4 : 0.2))
+  .force("charge", d3.forceManyBody().strength(-230))
+  .force("center",  d3.forceCenter(W/2, H/2))
+  .force("collide", d3.forceCollide().radius(d=>d.r+9))
+  .force("x", d3.forceX(d=>lx(d.layer)).strength(0.1))
+  .force("y", d3.forceY(d=>ly(d.layer)).strength(0.1));
+
+const linkEl = gAll.append("g").selectAll("line")
+  .data(links).join("line")
+  .attr("class", d=>"link"+(d.type==="tandem"||d.type==="consortium"?" tandem-link":""))
+  .attr("stroke", d=> d.type==="consortium" ? "#1D9E75" : d.type==="tandem" ? "#534AB7" : "#888780");
+
+const nodeEl = gAll.append("g").selectAll("g.ng")
+  .data(nodes).join("g")
+  .attr("class","ng")
+  .style("cursor","pointer")
+  .call(d3.drag()
+    .on("start", (e,d)=>{ if(!e.active) simulation.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+    .on("drag",  (e,d)=>{ d.fx=e.x; d.fy=e.y; })
+    .on("end",   (e,d)=>{ if(!e.active) simulation.alphaTarget(0); d.fx=null; d.fy=null; }))
+  .on("click", (e,d)=>{ e.stopPropagation(); showDetail(d); })
+  .on("mouseenter", (e,d)=>highlight(d.id))
+  .on("mouseleave", ()=>resetHL());
+
+nodeEl.append("circle")
+  .attr("r", d=>d.r)
+  .attr("fill",   d=> d.tandem ? FILLS[d.layer]  : "#f0ece3")
+  .attr("stroke", d=> d.tandem ? COLORS[d.layer] : "#b4b2a9")
+  .attr("stroke-width", d=> d.tandem ? 2 : 1)
+  .attr("class","node-circle");
+
+nodeEl.append("text")
+  .attr("class", d=>"node-label"+(d.r<15?" small":""))
+  .attr("text-anchor","middle")
+  .attr("dominant-baseline","central")
+  .each(function(d){
+    const el = d3.select(this);
+    const words = d.label.split(" ");
+    if(words.length <= 2 || d.r >= 17){
+      el.text(d.label);
+    } else {
+      const mid = Math.ceil(words.length / 2);
+      el.append("tspan").attr("x",0).attr("dy","-0.55em").text(words.slice(0,mid).join(" "));
+      el.append("tspan").attr("x",0).attr("dy","1.15em").text(words.slice(mid).join(" "));
+    }
+  });
+
+svg.on("click", ()=> closeDetail());
+
+simulation.on("tick", ()=>{
+  linkEl
+    .attr("x1",d=>d.source.x).attr("y1",d=>d.source.y)
+    .attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
+  nodeEl.attr("transform",d=>`translate(${d.x},${d.y})`);
+});
+
+/* ─── highlight ─────────────────────────────────── */
+function highlight(id){
+  const conn = new Set([id]);
+  links.forEach(l=>{
+    const s = typeof l.source==="object" ? l.source.id : l.source;
+    const t = typeof l.target==="object" ? l.target.id : l.target;
+    if(s===id) conn.add(t);
+    if(t===id) conn.add(s);
+  });
+  linkEl.attr("opacity", l=>{
+    const s = typeof l.source==="object" ? l.source.id : l.source;
+    const t = typeof l.target==="object" ? l.target.id : l.target;
+    return (s===id||t===id) ? 0.9 : 0.04;
+  });
+  nodeEl.selectAll("circle").attr("opacity",d=> conn.has(d.id) ? 1 : 0.15);
+  nodeEl.selectAll("text").attr("opacity",d=> conn.has(d.id) ? 1 : 0.15);
+}
+function resetHL(){
+  linkEl.attr("opacity",null);
+  nodeEl.selectAll("circle").attr("opacity",1);
+  nodeEl.selectAll("text").attr("opacity",1);
+}
+
+/* ─── detail panel ──────────────────────────────── */
+function showDetail(d){
+  document.getElementById("d-name").textContent = d.label;
+  const tag = document.getElementById("d-tag");
+  tag.textContent = LAYER_LABELS[d.layer] || d.layer;
+  tag.style.background = FILLS[d.layer] || "#f1efe8";
+  tag.style.color       = COLORS[d.layer] || "#444";
+  tag.style.borderColor = COLORS[d.layer] || "#aaa";
+  const tb = document.getElementById("d-tandem-badge");
+  tb.style.display = d.tandem ? "inline-block" : "none";
+  document.getElementById("d-who").textContent   = d.who   || "";
+  document.getElementById("d-role").textContent  = d.role  || "";
+  const ts = document.getElementById("d-tandem-sec");
+  const dt = document.getElementById("d-tandem");
+  if(d.tandemRole){ ts.style.display="block"; dt.textContent=d.tandemRole; }
+  else { ts.style.display="none"; }
+  const ps = document.getElementById("d-partner-sec");
+  const dp = document.getElementById("d-partners");
+  if(d.partners && d.partners.length){
+    ps.style.display = "block";
+    dp.innerHTML = d.partners.map(p=>`<span class="partner-badge">${p}</span>`).join("");
+  } else { ps.style.display="none"; }
+  document.getElementById("detail").style.display = "block";
+}
+function closeDetail(){
+  document.getElementById("detail").style.display = "none";
+}
+
+/* ─── filter ────────────────────────────────────── */
+function filter(type){
+  document.querySelectorAll(".ctrl-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelector(`.ctrl-btn.f-${type}`).classList.add("active");
+  if(type==="all"){
+    nodeEl.style("display",null);
+    linkEl.style("display",null);
+  } else if(type==="tandem"){
+    nodeEl.style("display",d=> d.tandem ? null : "none");
+    linkEl.style("display",l=>{
+      const s = typeof l.source==="object" ? l.source : nodes.find(n=>n.id===l.source);
+      const t = typeof l.target==="object" ? l.target : nodes.find(n=>n.id===l.target);
+      return (s && s.tandem && t && t.tandem) ? null : "none";
+    });
+  } else {
+    nodeEl.style("display",d=> d.layer===type ? null : "none");
+    linkEl.style("display",l=>{
+      const s = typeof l.source==="object" ? l.source : nodes.find(n=>n.id===l.source);
+      const t = typeof l.target==="object" ? l.target : nodes.find(n=>n.id===l.target);
+      return (s && t && (s.layer===type || t.layer===type)) ? null : "none";
+    });
+  }
+}
+</script>
+</body>
+</html>
